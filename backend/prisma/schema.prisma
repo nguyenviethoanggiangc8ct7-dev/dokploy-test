@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CategoryType {
+  hardware
+  software
+}
+
+enum AssetStatus {
+  active
+  maintenance
+  retired
+  stored
+}
+
+enum LicenseType {
+  perpetual
+  subscription
+  volume
+  oem
+}
+
+enum SoftwareStatus {
+  active
+  expired
+  suspended
+}
+
+model Category {
+  id          String       @id @default(uuid())
+  name        String
+  type        CategoryType
+  description String?
+  createdAt   DateTime     @default(now())
+
+  hardwareAssets HardwareAsset[]
+  softwareAssets SoftwareAsset[]
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  building    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  hardwareAssets HardwareAsset[]
+}
+
+model Employee {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  department String?
+  position   String?
+  createdAt  DateTime @default(now())
+
+  hardwareAssets HardwareAsset[]
+}
+
+model HardwareAsset {
+  id                String      @id @default(uuid())
+  name              String
+  assetTag          String      @unique
+  serialNumber      String?
+  model             String?
+  manufacturer      String?
+  categoryId        String?
+  category          Category?   @relation(fields: [categoryId], references: [id])
+  status            AssetStatus @default(active)
+  assignedToId      String?
+  assignedTo        Employee?   @relation(fields: [assignedToId], references: [id])
+  locationId        String?
+  location          Location?   @relation(fields: [locationId], references: [id])
+  purchaseDate      DateTime?
+  purchaseCost      Float?
+  warrantyExpiration DateTime?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model SoftwareAsset {
+  id             String         @id @default(uuid())
+  name           String
+  version        String?
+  licenseKey     String?
+  licenseType    LicenseType    @default(perpetual)
+  seatsTotal     Int            @default(1)
+  seatsUsed      Int            @default(0)
+  vendor         String?
+  categoryId     String?
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  purchaseDate   DateTime?
+  purchaseCost   Float?
+  expirationDate DateTime?
+  status         SoftwareStatus @default(active)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}

@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: qltsit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qltsit
+      POSTGRES_USER: qltsit_user
+      POSTGRES_PASSWORD: qltsit_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qltsit_user -d qltsit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qltsit-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://qltsit_user:qltsit_pass@db:5432/qltsit?schema=public
+      PORT: 3001
+      NODE_ENV: development
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run dev"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: qltsit-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
